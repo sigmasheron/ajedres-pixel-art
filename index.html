@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess Arcade – Pixel Party</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;image-rendering:pixelated}
+:root{
+  --dark:#0a0a1a;--darker:#050510;--gold:#f0c040;--gold2:#d4a520;
+  --green:#40e040;--red:#e04040;--blue:#4080ff;--cyan:#40e0e0;
+  --white:#e8e8f0;--gray:#606080;--panel:#111128;--border:#303060;--hover:#202048;
+}
+body{background:var(--dark);font-family:'Press Start 2P',monospace;color:var(--white);min-height:100vh;overflow-x:hidden}
+.scanlines{position:fixed;inset:0;pointer-events:none;z-index:1000;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px)}
+
+/* HEADER */
+.header{text-align:center;padding:18px 16px 12px;background:linear-gradient(180deg,#050510,var(--dark));border-bottom:3px solid var(--gold);position:relative}
+.title-main{font-size:13px;color:var(--gold);text-shadow:0 0 12px rgba(240,192,64,.6),2px 2px 0 #000;animation:pulse 2s infinite}
+.title-sub{font-size:7px;color:var(--cyan);margin-top:6px;letter-spacing:4px}
+@keyframes pulse{0%,100%{text-shadow:0 0 10px rgba(240,192,64,.6),2px 2px 0 #000}50%{text-shadow:0 0 22px rgba(240,192,64,.9),2px 2px 0 #000}}
+
+/* SCREENS */
+.screen{display:none}.screen.active{display:block}
+.page{max-width:700px;margin:0 auto;padding:16px}
+
+/* BUTTONS */
+.btn{font-family:'Press Start 2P',monospace;cursor:pointer;border:none;outline:none;padding:10px 14px;font-size:7px;letter-spacing:1px;transition:transform .1s,box-shadow .1s;position:relative}
+.btn:active{transform:translateY(2px)}
+.btn-gold{background:var(--gold);color:#000;box-shadow:0 4px 0 var(--gold2),4px 4px 0 #000}
+.btn-gold:hover{transform:translateY(-2px);box-shadow:0 6px 0 var(--gold2),6px 6px 0 #000}
+.btn-blue{background:var(--blue);color:#fff;box-shadow:0 4px 0 #2060cc,4px 4px 0 #000}
+.btn-blue:hover{transform:translateY(-2px);box-shadow:0 6px 0 #2060cc,6px 6px 0 #000}
+.btn-green{background:var(--green);color:#000;box-shadow:0 4px 0 #20a020,4px 4px 0 #000}
+.btn-green:hover{transform:translateY(-2px);box-shadow:0 6px 0 #20a020,6px 6px 0 #000}
+.btn-red{background:var(--red);color:#fff;box-shadow:0 4px 0 #902020,4px 4px 0 #000}
+.btn-sm{padding:7px 10px;font-size:6px}
+.btn-xs{padding:5px 8px;font-size:5px}
+
+/* INPUTS */
+.pixel-input{background:var(--darker);border:2px solid var(--border);color:var(--white);font-family:'Press Start 2P',monospace;font-size:8px;padding:9px;width:100%;outline:none}
+.pixel-input:focus{border-color:var(--gold)}
+.pixel-input.input-sm{font-size:7px;padding:7px}
+
+/* CARDS */
+.card{background:var(--panel);border:2px solid var(--border);padding:14px}
+.card-gold{border-color:var(--gold)}
+.section-title{font-size:7px;color:var(--gold);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.section-title::after{content:'';flex:1;height:2px;background:var(--border)}
+
+/* LOBBY */
+.game-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.game-card{background:var(--panel);border:2px solid var(--border);padding:12px 8px;cursor:pointer;text-align:center;transition:all .1s;position:relative}
+.game-card:hover{border-color:var(--gold);background:var(--hover);transform:translateY(-2px)}
+.game-card.selected{border-color:var(--green)}
+.game-icon{font-size:24px;display:block;margin-bottom:8px}
+.game-name{font-size:5px;color:var(--gold);margin-bottom:4px;line-height:1.6}
+.game-desc{font-size:4px;color:var(--gray);line-height:1.8}
+
+.players-list{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+.player-card{background:var(--darker);border:2px solid var(--border);padding:10px;position:relative}
+.player-card.me{border-color:var(--cyan)}
+.player-card.host{border-color:var(--gold)}
+.p-num{font-size:5px;color:var(--gray);margin-bottom:4px}
+.p-name{font-size:8px;color:var(--white)}
+.p-score{font-size:10px;color:var(--gold);margin-top:4px}
+.p-badge{position:absolute;top:5px;right:6px;font-size:8px}
+.waiting-dot{display:inline-block;animation:blink 1s step-end infinite;color:var(--green)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ROOM CODE DISPLAY */
+.room-code-display{background:var(--darker);border:3px solid var(--gold);padding:14px;text-align:center;margin:12px 0}
+.room-code-label{font-size:6px;color:var(--gray);margin-bottom:8px}
+.room-code-value{font-size:24px;color:var(--gold);letter-spacing:8px;text-shadow:0 0 12px rgba(240,192,64,.5)}
+.room-code-hint{font-size:5px;color:var(--gray);margin-top:8px}
+
+/* STATUS BAR */
+.status-bar{background:var(--panel);border-top:2px solid var(--border);border-bottom:2px solid var(--border);padding:8px 16px;display:flex;justify-content:space-between;align-items:center;font-size:6px;margin-bottom:10px}
+.status-turn{color:var(--cyan)}.status-info{color:var(--gray)}
+
+/* MINESWEEPER */
+.mine-wrap{display:flex;justify-content:center;overflow-x:auto;padding:4px 0}
+.mine-grid{display:inline-grid;gap:2px}
+.mine-cell{width:38px;height:38px;background:var(--panel);border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;font-family:'VT323',monospace;user-select:none;transition:background .1s}
+.mine-cell:hover:not(.revealed):not(.flagged){background:var(--hover);border-color:var(--gold)}
+.mine-cell.revealed{background:var(--darker);border-color:#1a1a3a;cursor:default}
+.mine-cell.flagged{background:var(--panel)}
+.mine-cell.mine-hit{background:var(--red)}
+.mine-cell.safe-reveal{background:#0a2a0a;border-color:var(--green)}
+.num-1{color:#40a0ff}.num-2{color:#40e040}.num-3{color:#e04040}.num-4{color:#8040ff}
+.num-5{color:#ff8040}.num-6{color:#40e0e0}.num-7{color:#e0e040}.num-8{color:var(--white)}
+
+/* PUZZLE */
+.puzzle-area{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.puzzle-board{display:inline-grid}
+.puzzle-cell{width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;user-select:none;transition:all .15s;border:1px solid transparent}
+.puzzle-cell.light-sq{background:#c8a76a}.puzzle-cell.dark-sq{background:#8b6040}
+.puzzle-cell:hover{filter:brightness(1.3);z-index:2}
+.puzzle-cell.selected-sq{outline:3px solid var(--gold);z-index:3}
+.puzzle-cell.correct-cell{outline:3px solid var(--green);background:rgba(64,224,64,.25)!important}
+.puzzle-cell.wrong-cell{outline:3px solid var(--red)}
+.piece-tray{background:var(--panel);border:2px solid var(--border);padding:10px;min-width:60px}
+.tray-piece{width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;border:2px solid var(--border);margin-bottom:6px;background:var(--darker);transition:all .1s}
+.tray-piece:hover{border-color:var(--gold);background:var(--hover)}
+.tray-piece.sel{border-color:var(--green);background:#0a200a}
+.tray-piece.disabled{opacity:.3;pointer-events:none}
+
+/* GUESS */
+.guess-wrap{text-align:center;padding:0 8px}
+.guess-timer{font-size:20px;color:var(--gold);animation:timerPulse 1s infinite;margin:6px 0}
+.guess-timer.urgent{color:var(--red);animation:timerPulse .4s infinite}
+@keyframes timerPulse{0%,100%{opacity:1}50%{opacity:.6}}
+.guess-question{font-size:7px;color:var(--cyan);margin:6px 0;line-height:1.8}
+.guess-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:500px;margin:10px auto}
+.g-btn{background:var(--panel);border:2px solid var(--border);padding:10px 6px;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:5px;color:var(--white);transition:all .1s;text-align:center}
+.g-btn:hover:not(.locked){border-color:var(--gold);background:var(--hover)}
+.g-btn.locked{cursor:default}
+.g-btn.correct-ans{border-color:var(--green);background:#0a200a;color:var(--green)}
+.g-btn.wrong-ans{border-color:var(--red);background:#200a0a;color:var(--red)}
+.piece-val{font-size:9px;color:var(--cyan);margin-top:4px}
+.streak-bar{display:flex;gap:4px;justify-content:center;margin:6px 0}
+.streak-pip{width:12px;height:12px;background:var(--border)}
+.streak-pip.lit{background:var(--gold);box-shadow:0 0 6px rgba(240,192,64,.7)}
+.round-info{font-size:7px;color:var(--gray);text-align:center;margin-top:6px}
+
+/* CHAT */
+.chat-wrap{display:flex;flex-direction:column;height:120px;background:var(--darker);border:2px solid var(--border);margin-top:10px}
+.chat-msgs{flex:1;overflow-y:auto;padding:6px;font-size:5px;line-height:2}
+.chat-msg{color:var(--gray)}.chat-msg .chat-name{color:var(--cyan)}.chat-msg.system{color:var(--gold)}
+.chat-input-row{display:flex;border-top:2px solid var(--border)}
+.chat-in{flex:1;background:transparent;border:none;color:var(--white);font-family:'Press Start 2P',monospace;font-size:5px;padding:6px;outline:none}
+.chat-send{background:var(--border);border:none;color:var(--white);font-family:'Press Start 2P',monospace;font-size:5px;padding:6px 10px;cursor:pointer}
+.chat-send:hover{background:var(--gold);color:#000}
+
+/* SCORES */
+.score-table{width:100%;background:var(--panel);border:2px solid var(--border);margin-top:10px}
+.score-row{display:flex;justify-content:space-between;padding:7px 12px;border-bottom:1px solid var(--border);font-size:6px}
+.score-row:last-child{border-bottom:none}
+.score-name{color:var(--white)}.score-pts{color:var(--gold)}
+
+/* TOAST */
+.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--panel);border:2px solid var(--gold);padding:10px 16px;font-size:7px;z-index:900;animation:toastIn .2s ease;max-width:90%;text-align:center}
+.toast.error{border-color:var(--red)}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* OVERLAY RESULT */
+.result-overlay{position:fixed;inset:0;background:rgba(0,0,10,.88);z-index:500;display:flex;align-items:center;justify-content:center}
+.result-box{background:var(--panel);border:3px solid var(--gold);padding:24px;max-width:340px;width:90%;text-align:center}
+.result-title{font-size:11px;color:var(--gold);margin-bottom:12px}
+.result-msg{font-size:7px;color:var(--white);line-height:2.2;margin-bottom:10px}
+.result-pts{font-size:22px;color:var(--green);margin:6px 0}
+
+/* MISC */
+.flex-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mb12{margin-bottom:12px}
+.text-center{text-align:center}.hidden{display:none}
+.instructions{background:var(--darker);border:1px solid var(--border);padding:8px;font-size:5px;color:var(--gray);line-height:2.2;margin-bottom:10px}
+.final-scores-list{margin:12px 0}
+.medal{font-size:14px}
+.conn-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:4px;box-shadow:0 0 6px var(--green)}
+.conn-dot.off{background:var(--red);box-shadow:0 0 6px var(--red)}
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+
+<div class="header">
+  <div class="title-main">♟ CHESS ARCADE ♟</div>
+  <div class="title-sub">PIXEL PARTY — ONLINE</div>
+</div>
+
+<!-- ══════════════════ SCREEN: MENU ══════════════════ -->
+<div id="screen-menu" class="screen active">
+  <div class="page" style="max-width:420px">
+    <div style="margin:20px 0 16px;text-align:center;font-size:8px;color:var(--gray)">INGRESA TU NOMBRE</div>
+    <input class="pixel-input" id="my-name" placeholder="TU NOMBRE..." maxlength="12" style="margin-bottom:14px">
+    
+    <div class="section-title">▶ CREAR SALA</div>
+    <button class="btn btn-gold" style="width:100%;margin-bottom:16px" onclick="createRoom()">✦ CREAR NUEVA SALA</button>
+    
+    <div class="section-title">▶ UNIRSE</div>
+    <div class="flex-row mb12">
+      <input class="pixel-input input-sm" id="room-code-input" placeholder="CÓDIGO (ej: AB3X)" maxlength="4" style="flex:1;text-transform:uppercase">
+      <button class="btn btn-blue btn-sm" onclick="joinRoom()">ENTRAR</button>
+    </div>
+    
+    <div style="font-size:5px;color:var(--gray);text-align:center;line-height:2;margin-top:20px">
+      2–4 jugadores · Buscaminas · Rompecabezas · Adivina la Pieza
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SCREEN: LOBBY ══════════════════ -->
+<div id="screen-lobby" class="screen">
+  <div class="page">
+    <div class="room-code-display">
+      <div class="room-code-label">CÓDIGO DE SALA — COMPARTE CON TUS AMIGOS</div>
+      <div class="room-code-value" id="lobby-code">----</div>
+      <div class="room-code-hint">Todos ingresan este código en el menú</div>
+    </div>
+
+    <div class="section-title">▶ JUGADORES <span id="lobby-count" style="font-size:5px;color:var(--gray)">(0/4)</span></div>
+    <div class="players-list" id="lobby-players"></div>
+
+    <div id="host-controls" class="hidden">
+      <div class="section-title">▶ MODO DE JUEGO</div>
+      <div class="game-cards">
+        <div class="game-card" onclick="setMode('minesweeper')">
+          <span class="game-icon">💣</span>
+          <div class="game-name">BUSCAMINAS</div>
+          <div class="game-desc">Turnos, piezas ocultas, evita bombas</div>
+        </div>
+        <div class="game-card" onclick="setMode('puzzle')">
+          <span class="game-icon">🧩</span>
+          <div class="game-name">ROMPECABEZAS</div>
+          <div class="game-desc">Coloca piezas en posición correcta</div>
+        </div>
+        <div class="game-card" onclick="setMode('guess')">
+          <span class="game-icon">🎯</span>
+          <div class="game-name">ADIVINA</div>
+          <div class="game-desc">¿Cuál vale más? ¡Sé el primero!</div>
+        </div>
+      </div>
+      <button class="btn btn-gold" style="width:100%;margin-top:8px" id="start-btn" onclick="startGame()">▶ INICIAR PARTIDA</button>
+    </div>
+    <div id="guest-waiting" class="hidden" style="text-align:center;font-size:7px;color:var(--gray);margin-top:10px">
+      Esperando al host<span class="waiting-dot">...</span>
+    </div>
+
+    <div class="chat-wrap mt8">
+      <div class="chat-msgs" id="chat-msgs"></div>
+      <div class="chat-input-row">
+        <input class="chat-in" id="chat-input" placeholder="Escribe un mensaje..." maxlength="60">
+        <button class="chat-send" onclick="sendChat()">»</button>
+      </div>
+    </div>
+
+    <div class="mt8 text-center">
+      <button class="btn btn-red btn-xs" onclick="leaveRoom()">◀ SALIR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SCREEN: MINESWEEPER ══════════════════ -->
+<div id="screen-minesweeper" class="screen">
+  <div class="page">
+    <div class="status-bar">
+      <div class="status-turn" id="mine-turn">TURNO: ---</div>
+      <div class="status-info" id="mine-flags">🚩 0/10</div>
+    </div>
+    <div class="instructions">
+      CLICK: revelar · CLICK DERECHO: bandera 🚩 · Piezas dan puntos · ¡Bombas pasan turno!
+    </div>
+    <div class="mine-wrap"><div id="mine-grid" class="mine-grid"></div></div>
+    <div class="score-table mt8" id="mine-scores"></div>
+    <div class="chat-wrap mt8">
+      <div class="chat-msgs" id="mine-chat"></div>
+      <div class="chat-input-row">
+        <input class="chat-in" id="mine-chat-input" placeholder="Chat..." maxlength="60">
+        <button class="chat-send" onclick="sendChat()">»</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SCREEN: PUZZLE ══════════════════ -->
+<div id="screen-puzzle" class="screen">
+  <div class="page">
+    <div class="status-bar">
+      <div class="status-turn" id="puzzle-turn">TURNO: ---</div>
+      <div class="status-info" id="puzzle-prog">PIEZAS: 0/10</div>
+    </div>
+    <div class="instructions">
+      Selecciona una pieza → Haz clic en su casilla correcta del tablero
+    </div>
+    <div class="puzzle-area" id="puzzle-area"></div>
+    <div class="score-table mt8" id="puzzle-scores"></div>
+    <div class="chat-wrap mt8">
+      <div class="chat-msgs" id="puzzle-chat"></div>
+      <div class="chat-input-row">
+        <input class="chat-in" id="puzzle-chat-input" placeholder="Chat..." maxlength="60">
+        <button class="chat-send" onclick="sendChat()">»</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SCREEN: GUESS ══════════════════ -->
+<div id="screen-guess" class="screen">
+  <div class="page">
+    <div class="status-bar">
+      <div class="status-turn" id="guess-round">RONDA: 1/10</div>
+      <div class="status-info">¡Primero en responder gana!</div>
+    </div>
+    <div class="instructions">
+      ¿Qué pieza vale más? Toca rápido. Racha de 3+ = bonus de +2 pts.
+    </div>
+    <div class="guess-wrap">
+      <div class="guess-timer" id="guess-timer">10</div>
+      <div class="guess-question" id="guess-question">CARGANDO...</div>
+      <div class="streak-bar" id="streak-bar"></div>
+      <div class="guess-opts" id="guess-opts"></div>
+      <div class="round-info" id="guess-round-info"></div>
+    </div>
+    <div class="score-table mt8" id="guess-scores"></div>
+    <div class="chat-wrap mt8">
+      <div class="chat-msgs" id="guess-chat"></div>
+      <div class="chat-input-row">
+        <input class="chat-in" id="guess-chat-input" placeholder="Chat..." maxlength="60">
+        <button class="chat-send" onclick="sendChat()">»</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SCREEN: GAME OVER ══════════════════ -->
+<div id="screen-gameover" class="screen">
+  <div class="page" style="text-align:center">
+    <div style="font-size:13px;color:var(--gold);margin:16px 0">🏆 RESULTADOS</div>
+    <div id="go-scores" class="final-scores-list"></div>
+    <div class="chat-wrap mt8">
+      <div class="chat-msgs" id="go-chat"></div>
+      <div class="chat-input-row">
+        <input class="chat-in" id="go-chat-input" placeholder="Chat..." maxlength="60">
+        <button class="chat-send" onclick="sendChat()">»</button>
+      </div>
+    </div>
+    <div class="flex-row mt12" style="justify-content:center;gap:10px">
+      <button class="btn btn-blue btn-sm" id="revancha-btn" onclick="newRound()" style="display:none">↺ REVANCHA (HOST)</button>
+      <button class="btn btn-red btn-sm" onclick="leaveRoom()">◀ SALIR</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULT OVERLAY -->
+<div id="result-overlay" class="result-overlay hidden">
+  <div class="result-box">
+    <div class="result-title" id="res-title"></div>
+    <div class="result-msg" id="res-msg"></div>
+    <div class="result-pts" id="res-pts"></div>
+    <button class="btn btn-gold btn-sm" onclick="closeResult()">OK ▶</button>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───
+let ws = null;
+let myId = null;
+let myName = '';
+let roomCode = null;
+let isHost = false;
+let roomData = null;
+let selectedMode = null;
+let selectedPiece = null;
+let guessTimerInterval = null;
+let guessTimeLeft = 10;
+let guessAnswered = false;
+let resultQueue = [];
+let showingResult = false;
+
+// ─── WS CONNECTION ───
+function connect(cb) {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}`);
+  ws.onopen = cb;
+  ws.onmessage = e => handleMsg(JSON.parse(e.data));
+  ws.onclose = () => showToast('Conexión perdida. Recarga la página.', true);
+  ws.onerror = () => showToast('Error de conexión', true);
+}
+
+function send(msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+}
+
+// ─── MESSAGE HANDLER ───
+function handleMsg(msg) {
+  switch(msg.type) {
+    case 'joined':
+      myId = msg.playerId;
+      roomCode = msg.roomCode;
+      isHost = msg.isHost;
+      document.getElementById('lobby-code').textContent = roomCode;
+      showScreen('screen-lobby');
+      break;
+
+    case 'room_state':
+      roomData = msg.room;
+      renderLobby();
+      if (roomData.gameState === 'playing') {
+        renderGameState();
+      }
+      break;
+
+    case 'game_started':
+      renderGameState();
+      break;
+
+    case 'mine_bomb':
+      queueResult('💥 ¡BOMBA!', `${msg.playerName} pisó una mina. Turno perdido.`, 0);
+      break;
+
+    case 'mine_piece':
+      queueResult(`${msg.piece.sym} ¡${msg.piece.name}!`, `${msg.playerName} encontró un ${msg.piece.name}!`, msg.pts);
+      break;
+
+    case 'puzzle_correct':
+      queueResult(`${msg.piece.sym} ¡CORRECTO!`, `${msg.playerName} colocó la pieza correctamente!`, msg.pts);
+      break;
+
+    case 'puzzle_wrong':
+      queueResult('❌ INCORRECTO', `${msg.playerName} falló la posición. Turno pasa.`, 0);
+      break;
+
+    case 'guess_result':
+      clearInterval(guessTimerInterval);
+      guessAnswered = true;
+      revealGuessAnswer(msg.correctIdx, msg.correct ? null : -1);
+      if (msg.correct) {
+        queueResult('✅ ¡CORRECTO!', `${msg.playerName} respondió primero! ${msg.streak >= 3 ? '🔥 RACHA x'+msg.streak : ''}`, msg.pts);
+      } else {
+        queueResult('❌ INCORRECTO', `${msg.playerName} falló.`, 0);
+      }
+      updateStreak(msg.streak);
+      break;
+
+    case 'guess_timeout':
+      clearInterval(guessTimerInterval);
+      guessAnswered = true;
+      revealGuessAnswer(msg.correctIdx, -1);
+      queueResult('⏱ TIEMPO!', 'Nadie respondió a tiempo.', 0);
+      break;
+
+    case 'game_over':
+      clearInterval(guessTimerInterval);
+      setTimeout(() => showGameOver(msg.scores), 500);
+      break;
+
+    case 'error':
+      showToast(msg.msg, true);
+      break;
+
+    case 'chat':
+      appendChat(msg);
+      break;
+  }
+}
+
+// ─── SCREENS ───
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function renderGameState() {
+  if (!roomData) return;
+  const mode = roomData.gameMode;
+  if (mode === 'minesweeper') { showScreen('screen-minesweeper'); renderMine(); }
+  else if (mode === 'puzzle') { showScreen('screen-puzzle'); renderPuzzle(); }
+  else if (mode === 'guess') { showScreen('screen-guess'); renderGuess(); }
+}
+
+// ─── MENU ACTIONS ───
+function createRoom() {
+  myName = document.getElementById('my-name').value.trim().toUpperCase() || 'PLAYER1';
+  connect(() => send({ type: 'create_room', name: myName }));
+}
+
+function joinRoom() {
+  myName = document.getElementById('my-name').value.trim().toUpperCase() || 'PLAYER';
+  const code = document.getElementById('room-code-input').value.trim().toUpperCase();
+  if (!code) { showToast('Ingresa un código de sala', true); return; }
+  connect(() => send({ type: 'join_room', name: myName, code }));
+}
+
+function leaveRoom() {
+  if (ws) ws.close();
+  ws = null; myId = null; roomCode = null; isHost = false; roomData = null;
+  showScreen('screen-menu');
+}
+
+// ─── LOBBY ───
+function renderLobby() {
+  if (!roomData) return;
+  const { players, hostId, gameMode, gameState } = roomData;
+  
+  document.getElementById('lobby-count').textContent = `(${players.length}/4)`;
+  
+  const medals = ['👑','🥈','🥉','4️⃣'];
+  document.getElementById('lobby-players').innerHTML = players.map((p,i) => `
+    <div class="player-card ${p.id===myId?'me':''} ${p.id===hostId?'host':''}">
+      <div class="p-num">JUGADOR ${i+1}</div>
+      <div class="p-name">${p.name}${p.id===myId?' ◀':''}</div>
+      <div class="p-score">${p.score} PTS</div>
+      <div class="p-badge">${p.id===hostId?'👑':''}</div>
+    </div>
+  `).join('');
+
+  if (isHost) {
+    document.getElementById('host-controls').classList.remove('hidden');
+    document.getElementById('guest-waiting').classList.add('hidden');
+    document.querySelectorAll('.game-card').forEach((c,i) => {
+      c.classList.toggle('selected', ['minesweeper','puzzle','guess'][i] === gameMode);
+    });
+    const canStart = players.length >= 2 && gameMode;
+    const btn = document.getElementById('start-btn');
+    btn.style.opacity = canStart ? '1' : '0.4';
+    btn.style.pointerEvents = canStart ? 'auto' : 'none';
+  } else {
+    document.getElementById('host-controls').classList.add('hidden');
+    document.getElementById('guest-waiting').classList.remove('hidden');
+  }
+}
+
+function setMode(mode) {
+  selectedMode = mode;
+  send({ type: 'set_game', mode });
+}
+
+function startGame() {
+  send({ type: 'start_game' });
+}
+
+function newRound() {
+  send({ type: 'new_round' });
+  showScreen('screen-lobby');
+}
+
+// ─── MINESWEEPER ───
+function renderMine() {
+  if (!roomData?.gameData) return;
+  const d = roomData.gameData;
+  const curPlayer = roomData.players[roomData.currentPlayerIdx];
+  const isMyTurn = curPlayer?.id === myId;
+
+  document.getElementById('mine-turn').textContent = `TURNO: ${curPlayer?.name}${isMyTurn?' (TÚ)':''}`;
+  const flags = d.board.filter(c=>c.flagged).length;
+  document.getElementById('mine-flags').textContent = `🚩 ${flags}/${d.bombs}`;
+
+  const grid = document.getElementById('mine-grid');
+  grid.style.gridTemplateColumns = `repeat(${d.cols},38px)`;
+  grid.innerHTML = '';
+
+  d.board.forEach((cell, idx) => {
+    const div = document.createElement('div');
+    div.className = 'mine-cell';
+    if (cell.revealed) {
+      div.classList.add('revealed');
+      if (cell.isBomb) { div.classList.add('mine-hit'); div.textContent = '💣'; }
+      else {
+        const piece = d.pieceMap[idx];
+        if (piece) { div.classList.add('safe-reveal'); div.textContent = piece.sym; }
+        else if (cell.adj > 0) { div.classList.add(`num-${cell.adj}`); div.textContent = cell.adj; }
+      }
+    } else if (cell.flagged) {
+      div.classList.add('flagged'); div.textContent = '🚩';
+    }
+    if (isMyTurn) {
+      div.addEventListener('click', () => send({ type: 'mine_click', idx }));
+      div.addEventListener('contextmenu', e => { e.preventDefault(); send({ type: 'mine_flag', idx }); });
+    }
+    grid.appendChild(div);
+  });
+
+  renderScores('mine-scores');
+}
+
+// ─── PUZZLE ───
+function renderPuzzle() {
+  if (!roomData?.gameData) return;
+  const d = roomData.gameData;
+  const curPlayer = roomData.players[roomData.currentPlayerIdx];
+  const isMyTurn = curPlayer?.id === myId;
+  const placed = d.solution.filter(p=>p.placed).length;
+
+  document.getElementById('puzzle-turn').textContent = `TURNO: ${curPlayer?.name}${isMyTurn?' (TÚ)':''}`;
+  document.getElementById('puzzle-prog').textContent = `PIEZAS: ${placed}/${d.total}`;
+
+  const area = document.getElementById('puzzle-area');
+  
+  let boardHTML = '<div><div class="puzzle-board" style="grid-template-columns:repeat(8,44px)">';
+  for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
+    const idx=r*8+c;
+    const isLight=(r+c)%2===0;
+    const placedPiece=d.placed[idx];
+    boardHTML += `<div class="puzzle-cell ${isLight?'light-sq':'dark-sq'}" data-idx="${idx}" onclick="puzzlePlace(${idx})">${placedPiece?placedPiece.sym:''}</div>`;
+  }
+  boardHTML += '</div></div>';
+
+  const remaining = d.solution.filter(p=>!p.placed);
+  let trayHTML = '<div class="piece-tray"><div style="font-size:5px;color:var(--gray);margin-bottom:6px">PIEZAS</div>';
+  remaining.forEach(p => {
+    const isSel = selectedPiece===p.id;
+    const dis = !isMyTurn;
+    trayHTML += `<div class="tray-piece${isSel?' sel':''}${dis?' disabled':''}" onclick="selectPiece(${p.id})">${p.sym}</div>`;
+  });
+  trayHTML += '</div>';
+
+  area.innerHTML = boardHTML + trayHTML;
+  renderScores('puzzle-scores');
+}
+
+function selectPiece(id) {
+  const curPlayer = roomData?.players[roomData.currentPlayerIdx];
+  if (curPlayer?.id !== myId) return;
+  selectedPiece = selectedPiece === id ? null : id;
+  renderPuzzle();
+}
+
+function puzzlePlace(boardIdx) {
+  if (selectedPiece === null) return;
+  const curPlayer = roomData?.players[roomData.currentPlayerIdx];
+  if (curPlayer?.id !== myId) return;
+  send({ type: 'puzzle_place', pieceId: selectedPiece, boardIdx });
+  selectedPiece = null;
+}
+
+// ─── GUESS ───
+function renderGuess() {
+  if (!roomData?.gameData) return;
+  const d = roomData.gameData;
+  const q = d.currentQuestion;
+  if (!q) return;
+
+  document.getElementById('guess-round').textContent = `RONDA: ${d.round+1}/${d.totalRounds}`;
+  document.getElementById('guess-question').textContent = '¿CUÁL PIEZA VALE MÁS PUNTOS?';
+
+  const opts = document.getElementById('guess-opts');
+  opts.innerHTML = q.pieces.map((p,i) => `
+    <div class="g-btn" onclick="guessAns(${i})">
+      <div style="font-size:26px;margin-bottom:5px">${p.sym}</div>
+      <div>${p.name}</div>
+      <div class="piece-val">${p.val===0?'INVALUABLE':p.val+' PTS'}</div>
+    </div>
+  `).join('');
+
+  guessAnswered = false;
+  clearInterval(guessTimerInterval);
+  guessTimeLeft = 10;
+  const timerEl = document.getElementById('guess-timer');
+  timerEl.classList.remove('urgent');
+  timerEl.textContent = '10';
+
+  guessTimerInterval = setInterval(() => {
+    guessTimeLeft--;
+    timerEl.textContent = guessTimeLeft;
+    if (guessTimeLeft <= 3) timerEl.classList.add('urgent');
+    if (guessTimeLeft <= 0) {
+      clearInterval(guessTimerInterval);
+      if (!guessAnswered) { guessAnswered = true; send({ type: 'guess_timeout' }); }
+    }
+  }, 1000);
+
+  updateStreak(d.streak);
+  renderScores('guess-scores');
+}
+
+function guessAns(idx) {
+  if (guessAnswered) return;
+  guessAnswered = true;
+  clearInterval(guessTimerInterval);
+  send({ type: 'guess_answer', idx });
+}
+
+function revealGuessAnswer(correctIdx, wrongIdx) {
+  const btns = document.querySelectorAll('.g-btn');
+  btns.forEach((b,i) => {
+    b.classList.add('locked');
+    if (i === correctIdx) b.classList.add('correct-ans');
+    else if (i === wrongIdx) b.classList.add('wrong-ans');
+  });
+}
+
+function updateStreak(streak) {
+  const bar = document.getElementById('streak-bar');
+  if (!bar) return;
+  bar.innerHTML = Array(5).fill(0).map((_,i)=>`<div class="streak-pip${i<streak?' lit':''}"></div>`).join('');
+}
+
+// ─── GAME OVER ───
+function showGameOver(scores) {
+  clearInterval(guessTimerInterval);
+  const medals = ['🥇','🥈','🥉','4️⃣'];
+  const sorted = [...scores].sort((a,b)=>b.score-a.score);
+  document.getElementById('go-scores').innerHTML = sorted.map((p,i)=>`
+    <div class="score-row">
+      <div class="score-name"><span class="medal">${medals[i]||'  '}</span> ${p.name}</div>
+      <div class="score-pts">${p.score} PTS</div>
+    </div>
+  `).join('');
+  document.getElementById('revancha-btn').style.display = isHost ? 'inline-block' : 'none';
+  showScreen('screen-gameover');
+}
+
+// ─── SCORES RENDER ───
+function renderScores(elId) {
+  if (!roomData) return;
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = roomData.players.map(p=>`
+    <div class="score-row">
+      <div class="score-name"><span class="conn-dot${p.connected===false?' off':''}"></span>${p.name}</div>
+      <div class="score-pts">${p.score} PTS</div>
+    </div>
+  `).join('');
+}
+
+// ─── RESULT OVERLAY ───
+function queueResult(title, msg, pts) {
+  resultQueue.push({title, msg, pts});
+  if (!showingResult) showNextResult();
+}
+
+function showNextResult() {
+  if (resultQueue.length === 0) { showingResult = false; return; }
+  showingResult = true;
+  const {title, msg, pts} = resultQueue.shift();
+  document.getElementById('res-title').textContent = title;
+  document.getElementById('res-msg').innerHTML = msg;
+  document.getElementById('res-pts').textContent = pts ? `+${pts} PTS!` : '';
+  document.getElementById('result-overlay').classList.remove('hidden');
+}
+
+function closeResult() {
+  document.getElementById('result-overlay').classList.add('hidden');
+  setTimeout(showNextResult, 200);
+}
+
+// ─── CHAT ───
+function appendChat(msg) {
+  const chatIds = ['chat-msgs','mine-chat','puzzle-chat','guess-chat','go-chat'];
+  chatIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const div = document.createElement('div');
+    div.className = `chat-msg${msg.system?' system':''}`;
+    div.innerHTML = msg.system 
+      ? `⚡ ${msg.msg}`
+      : `<span class="chat-name">${msg.playerName}:</span> ${msg.msg}`;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+  });
+}
+
+function sendChat() {
+  const inputs = ['chat-input','mine-chat-input','puzzle-chat-input','guess-chat-input','go-chat-input'];
+  let msg = '';
+  inputs.forEach(id => { const el=document.getElementById(id); if(el&&el.value.trim()){msg=el.value.trim();el.value='';} });
+  if (msg) send({ type: 'chat', msg });
+}
+
+// ─── TOAST ───
+function showToast(msg, isError=false) {
+  const t = document.createElement('div');
+  t.className = `toast${isError?' error':''}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ─── EVENT LISTENERS ───
+document.getElementById('my-name').addEventListener('keydown', e => { if(e.key==='Enter') createRoom(); });
+document.getElementById('room-code-input').addEventListener('keydown', e => { if(e.key==='Enter') joinRoom(); });
+document.getElementById('room-code-input').addEventListener('input', e => { e.target.value=e.target.value.toUpperCase(); });
+
+const chatInputs = ['chat-input','mine-chat-input','puzzle-chat-input','guess-chat-input','go-chat-input'];
+chatInputs.forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('keydown', e => { if(e.key==='Enter') sendChat(); });
+});
+</script>
+</body>
+</html>
