@@ -1,0 +1,17 @@
+{
+  "name": "chess-arcade",
+  "version": "1.0.0",
+  "description": "Chess Arcade - Pixel Party Online Multiplayer",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.16.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
